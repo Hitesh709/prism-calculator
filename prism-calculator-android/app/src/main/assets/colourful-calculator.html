@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Prism Calculator</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: #17131f;
+      background:
+        radial-gradient(circle at 15% 16%, rgba(255, 225, 86, .85), transparent 18rem),
+        radial-gradient(circle at 90% 12%, rgba(34, 211, 238, .75), transparent 18rem),
+        linear-gradient(135deg, #fff3c4, #ffb4c9 42%, #91e7ff 76%, #cbf7ad);
+      display: grid;
+      place-items: center;
+      padding: 18px;
+    }
+    .app {
+      width: min(100%, 420px);
+      border-radius: 30px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, .68);
+      border: 1px solid rgba(255, 255, 255, .72);
+      box-shadow: 0 24px 70px rgba(31, 16, 61, .24);
+    }
+    .top {
+      padding: 22px 22px 18px;
+      color: white;
+      background:
+        linear-gradient(135deg, rgba(23, 19, 31, .95), rgba(70, 38, 93, .9)),
+        conic-gradient(from 120deg, #ff4f9a, #ff9f1c, #31d98b, #22d3ee, #9d4edd, #ff4f9a);
+    }
+    .brand {
+      margin: 0 0 18px;
+      font-size: 1rem;
+      font-weight: 900;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,.66);
+    }
+    #expression {
+      min-height: 22px;
+      text-align: right;
+      color: rgba(255,255,255,.62);
+      font-weight: 800;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+    #result {
+      min-height: 54px;
+      text-align: right;
+      font-size: clamp(2.6rem, 15vw, 4rem);
+      line-height: 1;
+      font-weight: 950;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+    .keys {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      padding: 14px;
+    }
+    button {
+      min-height: 58px;
+      border: 0;
+      border-radius: 17px;
+      background: rgba(255, 255, 255, .76);
+      color: #17131f;
+      font: inherit;
+      font-size: 1.16rem;
+      font-weight: 950;
+      box-shadow: inset 0 -1px rgba(23, 19, 31, .12), 0 10px 20px rgba(23, 19, 31, .09);
+    }
+    button:active { transform: scale(.97); filter: saturate(1.18); }
+    .utility { background: linear-gradient(135deg, #fff, #ffe156); }
+    .operator { color: white; background: linear-gradient(135deg, #5b7cfa, #9d4edd); }
+    .equals { color: white; background: linear-gradient(135deg, #ff4f9a, #ff9f1c); grid-row: span 2; }
+    .zero { grid-column: span 2; }
+    .n1 { background: rgba(217,251,255,.82); }
+    .n2 { background: rgba(232,245,205,.82); }
+    .n3 { background: rgba(255,222,236,.82); }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="top">
+      <p class="brand">Prism Calculator</p>
+      <div id="expression"></div>
+      <div id="result">0</div>
+    </section>
+    <section class="keys">
+      <button class="utility" data-action="clear">AC</button>
+      <button class="utility" data-action="sign">+/-</button>
+      <button class="utility" data-action="percent">%</button>
+      <button class="operator" data-operator="/">÷</button>
+      <button class="n1" data-number="7">7</button>
+      <button class="n2" data-number="8">8</button>
+      <button class="n3" data-number="9">9</button>
+      <button class="operator" data-operator="*">×</button>
+      <button class="n2" data-number="4">4</button>
+      <button class="n3" data-number="5">5</button>
+      <button class="n1" data-number="6">6</button>
+      <button class="operator" data-operator="-">−</button>
+      <button class="n3" data-number="1">1</button>
+      <button class="n1" data-number="2">2</button>
+      <button class="n2" data-number="3">3</button>
+      <button class="operator" data-operator="+">+</button>
+      <button class="zero n1" data-number="0">0</button>
+      <button class="n2" data-action="decimal">.</button>
+      <button class="equals" data-action="equals">=</button>
+    </section>
+  </main>
+  <script>
+    const expressionEl = document.getElementById("expression");
+    const resultEl = document.getElementById("result");
+    const symbols = { "/": "÷", "*": "×", "-": "−", "+": "+" };
+    const state = { current: "0", previous: null, operator: null, reset: false };
+    const clean = value => Number(String(value).replaceAll(",", ""));
+    const format = value => Number.isFinite(value)
+      ? new Intl.NumberFormat("en-US", { maximumFractionDigits: 10 }).format(Math.round((value + Number.EPSILON) * 1e10) / 1e10)
+      : "Error";
+    function draw() {
+      resultEl.textContent = state.current;
+      expressionEl.textContent = state.operator && state.previous !== null ? `${state.previous} ${symbols[state.operator]}` : "";
+    }
+    function number(value) {
+      if (state.reset || state.current === "0" || state.current === "Error") {
+        state.current = value;
+        state.reset = false;
+      } else if (state.current.replaceAll(",", "").length < 14) {
+        state.current += value;
+      }
+      draw();
+    }
+    function decimal() {
+      if (state.reset || state.current === "Error") {
+        state.current = "0.";
+        state.reset = false;
+      } else if (!state.current.includes(".")) {
+        state.current += ".";
+      }
+      draw();
+    }
+    function calculate() {
+      const a = clean(state.previous);
+      const b = clean(state.current);
+      let total = 0;
+      if (state.operator === "+") total = a + b;
+      if (state.operator === "-") total = a - b;
+      if (state.operator === "*") total = a * b;
+      if (state.operator === "/") total = b === 0 ? NaN : a / b;
+      state.current = format(total);
+      state.previous = null;
+      state.operator = null;
+      state.reset = true;
+      draw();
+    }
+    function operator(value) {
+      if (state.current === "Error") return;
+      if (state.operator && !state.reset) calculate();
+      state.previous = state.current;
+      state.operator = value;
+      state.reset = true;
+      draw();
+    }
+    function action(value) {
+      if (value === "clear") Object.assign(state, { current: "0", previous: null, operator: null, reset: false });
+      if (value === "decimal") decimal();
+      if (value === "sign" && state.current !== "0" && state.current !== "Error") state.current = state.current.startsWith("-") ? state.current.slice(1) : `-${state.current}`;
+      if (value === "percent" && state.current !== "Error") state.current = format(clean(state.current) / 100);
+      if (value === "equals" && state.operator && !state.reset) calculate();
+      draw();
+    }
+    document.querySelectorAll("button").forEach(button => {
+      button.addEventListener("click", () => {
+        if (button.dataset.number) number(button.dataset.number);
+        if (button.dataset.operator) operator(button.dataset.operator);
+        if (button.dataset.action) action(button.dataset.action);
+      });
+    });
+  </script>
+</body>
+</html>
